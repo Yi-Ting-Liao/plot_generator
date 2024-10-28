@@ -9,12 +9,12 @@ line_colors = ["#8896AB", "#FFD5C2", "#C9D7F8", "#5C946E", "#4E5283"]
 marker_types = ["h", "o", "^", "d", "D"]
 font_size = 32
 
-plt_graph_settings = {
+plt_graph_settings: dict[str, dict[str, float | int | str | tuple[float, float] | dict[str, float | int | str]]] = {
     "andy_theme": {
-        "xtick.labelsize": 20,
-        "ytick.labelsize": 20,
-        "axes.labelsize": 20,
-        "axes.titlesize": 20,
+        "xtick.labelsize": 20,  # x軸刻度標籤大小
+        "ytick.labelsize": 20,  # y軸刻度標籤大小
+        "axes.labelsize": 20,  # 軸標籤大小
+        "axes.titlesize": 20,  # 標題大小
         # "font.family": "Times New Roman",
         # "mathtext.it": "Times New Roman:italic",
         # "mathtext.fontset": "custom",
@@ -95,7 +95,7 @@ def y_ticks_generator(
 
     y_ticks_interval = max((y_max - y_min) / 4, y_min / 2)
 
-    return np.arange(y_min, y_max + y_ticks_interval, step=y_ticks_interval)
+    return np.arange(y_min, y_max + y_ticks_interval, step=y_ticks_interval).tolist()
 
 
 # 改變 x, y 的資料
@@ -113,7 +113,7 @@ def data_preprocessing(data_x: list[float], data_y: list[list[float]]) -> tuple[
         for j in range(len(unique)):
             new_data_y[i].append(float(counts[j]) / len(data_y[i]))
 
-    new_data_x = unique
+    new_data_x = unique.tolist()
 
     return new_data_x, new_data_y
 
@@ -154,10 +154,11 @@ class Data:
             self.x_count += 1
 
         if self.y_count != len(self.y_legends):
-            logger.logger.error(f"In file {filename}, the number of y_labels is not equal to the number of y values")
-            return
+            logger.logger.warning(f"In file {filename}, the number of y_labels is not equal to the number of y values")
 
-    def gen_graph(self, data_preprocessing: Callable[[list[float]], list[list[float]]]):
+    def gen_graph(
+        self, data_preprocessing: Callable[[list[float], list[list[float]]], tuple[list[float], list[list[float]]]]
+    ):
         if self.y_count > len(line_colors):
             logger.logger.warning("The number of y values is more than the number of colors")
 
@@ -176,7 +177,7 @@ class Data:
                 **plt_graph_settings["ax1_settings"],
             )  # 繪製折線圖 (x軸資料, y軸資料, 參數)
 
-        # ================================================================
+        # ================================================================ set the y ticks
 
         y_ticks = y_ticks_generator(y_new)
 
