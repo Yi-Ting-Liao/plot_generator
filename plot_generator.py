@@ -88,9 +88,15 @@ plt_graph_settings: dict[str, dict[str, float | int | str | tuple[float, float] 
 
 
 # 生成 y 軸刻度
-def y_ticks_generator(
-    y_data: list[list[float]],
-) -> list[float]:
+def y_ticks_generator(y_data: list[list[float]]) -> list[float] | None:
+    """! y_ticks_generator
+    If you want to change the y ticks, you can change the y ticks here.
+    Return array is the y ticks
+
+    @param y_data: list[list[float]]: the y data
+    @return list[float] | None: the y ticks, None means default setting
+    """
+
     y_max = max([max(y) for y in y_data])
     y_min = min([min(y) for y in y_data])
 
@@ -102,9 +108,30 @@ def y_ticks_generator(
     return np.arange(y_lower_bound, y_upper_bound, step=y_ticks_interval).tolist()
 
 
+# 生成 x 軸刻度
+def x_ticks_generator(x_data: list[float]) -> list[float] | None:
+    """! x_ticks_generator
+    If you want to change the x ticks, you can change the x ticks here.
+    Return array is the x ticks
+
+    @param x_data: list[float]: the x data
+    @return list[float] | None: the x ticks, None means default setting
+    """
+
+    return None
+
+
 # 改變 x, y 的資料
 def data_preprocessing(data_x: list[float], data_y: list[list[float]]) -> tuple[list[float], list[list[float]]]:
-    # set new_data[i] t data[i] plus one
+    """! data_preprocessing
+    If you want to change the data, you can change the data here.
+    Be sure that the dimension of new_x and new_y is the same
+
+    @param data_x: list[float]: the x data
+    @param data_y: list[list[float]]: the y data
+    @return tuple[list[float], list[list[float]]]: the new x, y data
+    """
+
     new_data_y: list[list[float]] = []
     new_data_x: list[float] = []
 
@@ -133,9 +160,11 @@ def data_preprocessing(data_x: list[float], data_y: list[list[float]]) -> tuple[
             else:
                 new_data_y[i].append(0)
 
+    print(new_data_y)
+
     new_data_x = all_unique_x
 
-    return new_data_x, new_data_y
+    return data_x, data_y
 
 
 class Data:
@@ -206,6 +235,7 @@ class Data:
         # ================================================================ set the y ticks
 
         y_ticks = y_ticks_generator(y_new)
+        x_ticks = x_ticks_generator(x_new)
 
         # ================================================================ set the graph appearance
 
@@ -214,10 +244,10 @@ class Data:
         ax1.yaxis.set_label_coords(**plt_graph_settings["ax1_yaxis_label_coords"])
 
         plt.rcParams.update(plt_graph_settings["andy_theme"])
-        plt.xlabel(self.x_label, **plt_graph_settings["plt_xlabel_settings"])
-        plt.ylabel(self.y_label, **plt_graph_settings["plt_ylabel_settings"])
-        plt.xticks(**plt_graph_settings["plt_xticks_settings"])
-        plt.yticks(y_ticks, **plt_graph_settings["plt_yticks_settings"])
+        plt.xlabel(xlabel=self.x_label, **plt_graph_settings["plt_xlabel_settings"])
+        plt.ylabel(ylabel=self.y_label, **plt_graph_settings["plt_ylabel_settings"])
+        plt.xticks(ticks=x_ticks, **plt_graph_settings["plt_xticks_settings"])
+        plt.yticks(ticks=y_ticks, **plt_graph_settings["plt_yticks_settings"])
         plt.subplots_adjust(**plt_graph_settings["subplots_adjust_settings"])
 
         leg = plt.legend(self.y_legends, **plt_graph_settings["plt_leg_settings"])
@@ -230,6 +260,12 @@ class Data:
 
 
 def check_setting() -> bool:
+    """! check_setting
+    Check the setting of the plot generator
+
+    @return bool: True if the setting is correct, False otherwise
+    """
+
     return_value = True
     if len(line_colors) != len(marker_types):
         logger.logger.warning("The number of colors is not equal to the number of markers")
@@ -239,6 +275,12 @@ def check_setting() -> bool:
 
 
 def check_output_folder() -> bool:
+    """! check_output_folder
+    Check the output folder path is correct
+
+    @return bool: True if the output folder path is correct, False otherwise
+    """
+
     return_value = True
     try:
         if OUTPUT_FOLDER[-1] == "/":
@@ -260,11 +302,42 @@ if __name__ == "__main__":
     else:
         logger.logger.info("Setting check passed")
 
-    data = Data(
-        filename="/Users/test/Desktop/plot/input.txt",
-        x_label="# Node",
-        y_label="PSnode. num",
-        y_legends=["PS", "GREEDY", "Q-CAST"],
-    )
+    all_file_names: list[str] = [
+        "/Users/test/Desktop/plot/input.txt",
+    ]
 
-    data.gen_graph(data_preprocessing)
+    all_x_labels: list[str] = [
+        "# Node",
+    ]
+
+    all_y_labels: list[str] = [
+        "PSnode. num",
+    ]
+
+    all_y_legends: list[list[str]] = [
+        ["PS", "GREEDY", "Q-CAST"],
+    ]
+
+    all_data: list[Data] = []
+
+    for i in range(len(all_file_names)):
+        all_data.append(
+            Data(
+                filename=all_file_names[i],
+                x_label=all_x_labels[i],
+                y_label=all_y_labels[i],
+                y_legends=all_y_legends[i],
+            )
+        )
+
+    for data in all_data:
+        data.gen_graph(data_preprocessing)
+
+    # data = Data(
+    #     filename="/Users/test/Desktop/plot/input.txt",
+    #     x_label="# Node",
+    #     y_label="PSnode. num",
+    #     y_legends=["PS", "GREEDY", "Q-CAST"],
+    # )
+
+    # data.gen_graph(data_preprocessing)
