@@ -1,7 +1,8 @@
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import loguru as logger
-from typing import Callable
+from typing import Callable, Optional
 
 OUTPUT_FOLDER = "/Users/test/Desktop/plot/"
 
@@ -95,7 +96,10 @@ def y_ticks_generator(
 
     y_ticks_interval = max((y_max - y_min) / 4, y_min / 2)
 
-    return np.arange(y_min, y_max + y_ticks_interval, step=y_ticks_interval).tolist()
+    y_lower_bound = y_min if y_min != y_max else y_min - y_ticks_interval
+    y_upper_bound = y_max + y_ticks_interval
+
+    return np.arange(y_lower_bound, y_upper_bound, step=y_ticks_interval).tolist()
 
 
 # 改變 x, y 的資料
@@ -107,19 +111,37 @@ def data_preprocessing(data_x: list[float], data_y: list[list[float]]) -> tuple[
     for i in range(len(data_y)):
         new_data_y.append([])
 
-    unique, counts = np.unique(data_y[0], return_counts=True)
+    all_unique_x: list[float] = []
 
     for i in range(len(data_y)):
+        unique, counts = np.unique(data_y[i], return_counts=True)
         for j in range(len(unique)):
-            new_data_y[i].append(float(counts[j]) / len(data_y[i]))
+            if unique[j] not in all_unique_x:
+                all_unique_x.append(float(unique[j]))
 
-    new_data_x = unique.tolist()
+    # sort the unique x
+    all_unique_x.sort()
+
+    for i in range(len(data_y)):
+        unique, counts = np.unique(data_y[i], return_counts=True)
+        # print type of counts
+        for j in range(len(all_unique_x)):
+            # if the x is not in the data, append 0
+            # else append the count of the x in the variable counts
+            if all_unique_x[j] in data_y[i]:
+                new_data_y[i].append(float(counts[np.where(unique == all_unique_x[j])[0][0]] / len(data_y[i])))
+            else:
+                new_data_y[i].append(0)
+
+    new_data_x = all_unique_x
 
     return new_data_x, new_data_y
 
 
 class Data:
-    def __init__(self, filename: str, x_label: str, y_label: str, y_legends: list[str]):
+    def __init__(
+        self, filename: str, x_label: str, y_label: str, y_legends: list[str], output_filename: Optional[str] = None
+    ):
         try:
             with open(filename, "r", encoding="utf-8") as f:
                 lines = f.readlines()
@@ -135,6 +157,10 @@ class Data:
         self.y_label = y_label
         self.y_legends = y_legends
         self.filename = filename
+        if output_filename is None:
+            self.output_filename = os.path.splitext(os.path.basename(filename))[0]
+        else:
+            self.output_filename = output_filename
         self.x_count = 0
         self.y_count = 0
         self.x: list[float] = []
@@ -198,7 +224,7 @@ class Data:
         leg.get_frame().set_linewidth(plt_graph_settings["plt_leg_frame_settings"]["linewidth"])
 
         # ================================================================ save the graph
-        plt.savefig(f"{OUTPUT_FOLDER}test.png")
+        plt.savefig(f"{OUTPUT_FOLDER}{self.output_filename}.png")
         plt.close()
         logger.logger.info(f"{self.filename} is saved as test.png")
 
@@ -212,17 +238,33 @@ def check_setting() -> bool:
     return return_value
 
 
+def check_output_folder() -> bool:
+    return_value = True
+    try:
+        if OUTPUT_FOLDER[-1] == "/":
+            pass
+    except IndexError:
+        logger.logger.error("Output folder path should end with /")
+        return_value = False
+
+    return return_value
+
+
 if __name__ == "__main__":
     if not check_setting():
+        logger.logger.error("Setting check failed")
+        exit(1)
+    if not check_output_folder():
         logger.logger.error("Setting check failed")
         exit(1)
     else:
         logger.logger.info("Setting check passed")
 
     data = Data(
-        "/Users/test/Desktop/plot/input.txt",
-        "# Node",
-        "PSnode. num",
-        ["PS"],
+        filename="/Users/test/Desktop/plot/input.txt",
+        x_label="# Node",
+        y_label="PSnode. num",
+        y_legends=["PS", "GREEDY", "Q-CAST"],
     )
+
     data.gen_graph(data_preprocessing)
